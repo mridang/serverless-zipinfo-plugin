@@ -1,0 +1,13 @@
+service: simple-service
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+
+plugins:
+  - ../../../src
+
+functions:
+  index:
+    handler: index.main
+    
