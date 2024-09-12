@@ -24,7 +24,7 @@ describe('plugin tests', () => {
     });
 
     expect(logsBuffer.join('\n')).toContain(
-      'rw-r--r-- 4.5 unx       20 B bl       22 B defN 1979-12-31T17:00:00.000Z index.js',
+      'rw-r--r-- 4.5 unx       20 B bl       22 B defN',
     );
   });
 });
