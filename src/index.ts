@@ -3,10 +3,12 @@ import Plugin, { Logging } from 'serverless/classes/Plugin';
 import AdmZip from 'adm-zip';
 // @ts-expect-error since the types are missing
 import filesize from 'filesize';
+import { existsSync } from 'fs';
+import { join } from 'path';
 
-class ServerlessCheckovPlugin implements Plugin {
+class ServerlessZipinfoPlugin implements Plugin {
   public readonly hooks: Plugin.Hooks = {};
-  public readonly name: string = 'serverless-checkov-plugin';
+  public readonly name: string = 'serverless-zipinfo-plugin';
 
   constructor(
     private readonly serverless: Serverless,
@@ -19,15 +21,35 @@ class ServerlessCheckovPlugin implements Plugin {
   }
 
   private async printArchiveInfo(): Promise<void> {
-    const artifact = this.serverless.service.package.artifact;
+    const artifact =
+      this.serverless.service.package.artifact ||
+      (existsSync(
+        join(
+          this.serverless.config.servicePath,
+          '.serverless',
+          this.serverless.service.getServiceName() + '.zip',
+        ),
+      )
+        ? join(
+            this.serverless.config.servicePath,
+            '.serverless',
+            this.serverless.service.getServiceName() + '.zip',
+          )
+        : this.serverless.service.package.artifact);
+
     if (artifact) {
-      console.log(`The zip file is located at: ${artifact}`);
+      this.logging.log.success(`Introspected archive: ${artifact}`);
+      console.log('\n');
 
       var zip = new AdmZip(artifact);
       zip.getEntries().forEach((zipEntry) => {
-        const infoLine = this.formatZipEntry(zipEntry);
-        this.logging.log.info(infoLine);
-        console.log(infoLine);
+        if (zipEntry.entryName.includes('node_modules')) {
+          return;
+        } else {
+          const infoLine = this.formatZipEntry(zipEntry);
+          this.logging.log.info(infoLine);
+          console.log(infoLine);
+        }
       });
     } else {
       this.logging.log.error('No zip file found.');
@@ -54,8 +76,8 @@ class ServerlessCheckovPlugin implements Plugin {
       (permissions & 0o002 ? 'w' : '-') +
       (permissions & 0o001 ? 'x' : '-');
 
-    return `${permissionString} 4.5 unx ${size.padStart(10, ' ')} bl ${compressedSize.padStart(10, ' ')} ${method} ${dateTime} ${fileName}`;
+    return `• ${permissionString} 4.5 unx ${size.padStart(10, ' ')} bl ${compressedSize.padStart(10, ' ')} ${method} ${dateTime} ${fileName}`;
   }
 }
 
-export = ServerlessCheckovPlugin;
+export = ServerlessZipinfoPlugin;

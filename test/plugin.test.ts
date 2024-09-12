@@ -17,7 +17,7 @@ logEmitter.on(
 );
 
 describe('plugin tests', () => {
-  it('should run checkov on package', async () => {
+  it('should run zipinfo on package', async () => {
     await runServerless(path.join(require.resolve('serverless'), '..', '..'), {
       cwd: path.resolve(__dirname, 'fixtures', 'simple-service'),
       command: 'package',
