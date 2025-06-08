@@ -10,4 +10,3 @@ plugins:
 functions:
   index:
     handler: index.main
-    
