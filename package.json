@@ -1,6 +1,6 @@
 {
   "name": "@mridang/serverless-zipinfo-plugin",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "scripts": {
     "prepack": "tsc",
     "build": "tsc",
