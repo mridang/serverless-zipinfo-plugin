@@ -2,7 +2,6 @@ import Serverless from 'serverless';
 // eslint-disable-next-line import/no-unresolved
 import Plugin, { Logging } from 'serverless/classes/Plugin';
 import AdmZip from 'adm-zip';
-// @ts-expect-error since the types are missing
 import filesize from 'filesize';
 import { existsSync } from 'fs';
 import { join } from 'path';
