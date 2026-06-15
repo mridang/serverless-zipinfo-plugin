@@ -2,7 +2,7 @@ import Serverless from 'serverless';
 // eslint-disable-next-line import/no-unresolved
 import Plugin, { Logging } from 'serverless/classes/Plugin';
 import AdmZip from 'adm-zip';
-import filesize from 'filesize';
+import { filesize } from 'filesize';
 import { existsSync } from 'fs';
 import { join } from 'path';
 
@@ -58,8 +58,8 @@ class ServerlessZipinfoPlugin implements Plugin {
 
   formatZipEntry(entry: AdmZip.IZipEntry): string {
     const mode = entry.header.attr >>> 16;
-    const size = filesize.filesize(entry.header.size);
-    const compressedSize = filesize.filesize(entry.header.compressedSize);
+    const size = filesize(entry.header.size);
+    const compressedSize = filesize(entry.header.compressedSize);
     const method = entry.header.method === 0 ? 'stor' : 'defN';
     const dateTime = entry.header.time.toISOString();
     const fileName = entry.entryName;
@@ -80,4 +80,4 @@ class ServerlessZipinfoPlugin implements Plugin {
   }
 }
 
-export = ServerlessZipinfoPlugin;
+export default ServerlessZipinfoPlugin;
