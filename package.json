@@ -65,7 +65,7 @@
     "log": "^6.3.1",
     "prettier": "^3.1.1",
     "semantic-release": "^25.0.1",
-    "serverless": "^3.38.0",
+    "serverless": "^4.45.0",
     "ts-jest": "^29.4.0",
     "typescript": "^5.9.3"
   },
@@ -73,7 +73,7 @@
     "access": "public"
   },
   "dependencies": {
-    "adm-zip": "^0.5.16",
+    "adm-zip": "^0.6.1",
     "filesize": "^10.1.6"
   }
 }
