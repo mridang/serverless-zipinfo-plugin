@@ -1,16 +1,10 @@
-import {
-  jest,
-  describe,
-  it,
-  expect,
-  beforeEach,
-  afterEach,
-} from '@jest/globals';
 import AdmZip from 'adm-zip';
 import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import ServerlessZipinfoPlugin from '../src/index';
+
+type Logger = (...args: unknown[]) => void;
 
 describe('plugin tests', () => {
   let dir: string;
@@ -29,10 +23,14 @@ describe('plugin tests', () => {
     zip.addFile('index.js', Buffer.from('exports.main = () => 1;\n'));
     zip.writeZip(artifact);
 
-    const info = jest.fn();
-    const success = jest.fn();
-    const error = jest.fn();
-    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const infoLines: string[] = [];
+    const successLines: string[] = [];
+    const errorLines: string[] = [];
+    const consoleLines: string[] = [];
+    const originalLog = console.log;
+    console.log = (...args: unknown[]) => {
+      consoleLines.push(args.join(' '));
+    };
 
     const serverless = {
       service: {
@@ -41,12 +39,19 @@ describe('plugin tests', () => {
       },
       config: { servicePath: dir },
     };
+    const logging = {
+      log: {
+        info: ((line: string) => infoLines.push(line)) as Logger,
+        success: ((line: string) => successLines.push(line)) as Logger,
+        error: ((line: string) => errorLines.push(line)) as Logger,
+      },
+    };
     const plugin = new ServerlessZipinfoPlugin(
       serverless as unknown as ConstructorParameters<
         typeof ServerlessZipinfoPlugin
       >[0],
       {},
-      { log: { info, success, error } } as unknown as ConstructorParameters<
+      logging as unknown as ConstructorParameters<
         typeof ServerlessZipinfoPlugin
       >[2],
     );
@@ -54,12 +59,12 @@ describe('plugin tests', () => {
     try {
       await (plugin.hooks['after:package:finalize'] as () => Promise<void>)();
     } finally {
-      logSpy.mockRestore();
+      console.log = originalLog;
     }
 
-    expect(success).toHaveBeenCalledWith(`Introspected archive: ${artifact}`);
-    expect(error).not.toHaveBeenCalled();
-    expect(info).toHaveBeenCalledWith(expect.stringContaining('defN'));
-    expect(info).toHaveBeenCalledWith(expect.stringContaining('index.js'));
+    expect(successLines).toEqual([`Introspected archive: ${artifact}`]);
+    expect(errorLines).toEqual([]);
+    expect(infoLines.some((line) => line.includes('defN'))).toBe(true);
+    expect(infoLines.some((line) => line.includes('index.js'))).toBe(true);
   });
 });
