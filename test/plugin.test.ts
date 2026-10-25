@@ -1,36 +1,65 @@
-import runServerless from '@serverless/test/run-serverless';
-import path, { dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { createRequire } from 'module';
-// @ts-expect-error since the types are missing
-import logEmitter from 'log/lib/emitter.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const require = createRequire(import.meta.url);
-
-const logsBuffer: string[] = [];
-logEmitter.on(
-  'log',
-  (event: { logger: { namespace: string }; messageTokens: string[] }) => {
-    if (
-      !event.logger.namespace.startsWith('serverless:lifecycle') &&
-      event.logger.namespace !== 'serverless'
-    ) {
-      logsBuffer.push(event.messageTokens[0]);
-    }
-  },
-);
+import {
+  jest,
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+} from '@jest/globals';
+import AdmZip from 'adm-zip';
+import { mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import ServerlessZipinfoPlugin from '../src/index';
 
 describe('plugin tests', () => {
-  it('should run zipinfo on package', async () => {
-    await runServerless(path.join(require.resolve('serverless'), '..', '..'), {
-      cwd: path.resolve(__dirname, 'fixtures', 'simple-service'),
-      command: 'package',
-    });
+  let dir: string;
 
-    expect(logsBuffer.join('\n')).toContain(
-      'rw-r--r-- 4.5 unx       20 B bl       22 B defN',
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'zipinfo-plugin-'));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('should list the entries of the packaged archive', async () => {
+    const artifact = join(dir, 'simple-service.zip');
+    const zip = new AdmZip();
+    zip.addFile('index.js', Buffer.from('exports.main = () => 1;\n'));
+    zip.writeZip(artifact);
+
+    const info = jest.fn();
+    const success = jest.fn();
+    const error = jest.fn();
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+    const serverless = {
+      service: {
+        package: { artifact },
+        getServiceName: () => 'simple-service',
+      },
+      config: { servicePath: dir },
+    };
+    const plugin = new ServerlessZipinfoPlugin(
+      serverless as unknown as ConstructorParameters<
+        typeof ServerlessZipinfoPlugin
+      >[0],
+      {},
+      { log: { info, success, error } } as unknown as ConstructorParameters<
+        typeof ServerlessZipinfoPlugin
+      >[2],
     );
+
+    try {
+      await (plugin.hooks['after:package:finalize'] as () => Promise<void>)();
+    } finally {
+      logSpy.mockRestore();
+    }
+
+    expect(success).toHaveBeenCalledWith(`Introspected archive: ${artifact}`);
+    expect(error).not.toHaveBeenCalled();
+    expect(info).toHaveBeenCalledWith(expect.stringContaining('defN'));
+    expect(info).toHaveBeenCalledWith(expect.stringContaining('index.js'));
   });
 });
