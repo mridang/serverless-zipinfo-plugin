@@ -33,7 +33,7 @@
   "description": "A plugin for the serverless framework to display the archive contents",
   "private": false,
   "peerDependencies": {
-    "serverless": "^3.0.0"
+    "serverless": "^3.0.0 || ^4.0.0"
   },
   "engines": {
     "node": ">=22.0.0"
