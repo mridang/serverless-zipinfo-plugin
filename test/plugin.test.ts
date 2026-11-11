@@ -1,7 +1,10 @@
+/**
+ * @file Unit tests for the zipinfo plugin, run against a real zip archive written to a temporary directory.
+ */
 import AdmZip from 'adm-zip';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import path from 'node:path';
 import ServerlessZipinfoPlugin from '../src/index';
 
 type Logger = (...args: unknown[]) => void;
@@ -9,16 +12,16 @@ type Logger = (...args: unknown[]) => void;
 describe('plugin tests', () => {
   let dir: string;
 
-  beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), 'zipinfo-plugin-'));
+  beforeEach(async () => {
+    dir = await mkdtemp(path.join(tmpdir(), 'zipinfo-plugin-'));
   });
 
-  afterEach(() => {
-    rmSync(dir, { recursive: true, force: true });
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
   });
 
   it('should list the entries of the packaged archive', async () => {
-    const artifact = join(dir, 'simple-service.zip');
+    const artifact = path.join(dir, 'simple-service.zip');
     const zip = new AdmZip();
     zip.addFile('index.js', Buffer.from('exports.main = () => 1;\n'));
     zip.writeZip(artifact);
@@ -66,5 +69,6 @@ describe('plugin tests', () => {
     expect(errorLines).toEqual([]);
     expect(infoLines.some((line) => line.includes('defN'))).toBe(true);
     expect(infoLines.some((line) => line.includes('index.js'))).toBe(true);
+    expect(consoleLines.some((line) => line.includes('index.js'))).toBe(true);
   });
 });

@@ -1,3 +1,6 @@
+/**
+ * @file Jest configuration that compiles TypeScript with ts-jest and reports coverage and JUnit output.
+ */
 export default {
   preset: 'ts-jest/presets/default-esm',
   transform: {
