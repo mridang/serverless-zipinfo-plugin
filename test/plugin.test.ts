@@ -5,7 +5,7 @@ import AdmZip from 'adm-zip';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import ServerlessZipinfoPlugin from '../src/index';
+import ServerlessZipinfoPlugin from '../src/index.js';
 
 type Logger = (...args: unknown[]) => void;
 
