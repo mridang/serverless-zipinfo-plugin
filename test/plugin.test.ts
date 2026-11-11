@@ -1,7 +1,7 @@
 import AdmZip from 'adm-zip';
-import { mkdtempSync, rmSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import ServerlessZipinfoPlugin from '../src/index';
 
 type Logger = (...args: unknown[]) => void;

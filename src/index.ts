@@ -3,8 +3,8 @@ import Serverless from 'serverless';
 import Plugin, { Logging } from 'serverless/classes/Plugin';
 import AdmZip from 'adm-zip';
 import { filesize } from 'filesize';
-import { existsSync } from 'fs';
-import { join } from 'path';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 
 class ServerlessZipinfoPlugin implements Plugin {
   public readonly hooks: Plugin.Hooks = {};
