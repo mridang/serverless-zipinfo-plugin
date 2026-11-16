@@ -79,15 +79,14 @@ class ServerlessZipinfoPlugin implements Plugin {
       console.log('\n');
 
       var zip = new AdmZip(artifact);
-      zip.getEntries().forEach((zipEntry) => {
+      for (const zipEntry of zip.getEntries()) {
         if (zipEntry.entryName.includes('node_modules')) {
-          return;
-        } else {
-          const infoLine = this.formatZipEntry(zipEntry);
-          this.logging.log.info(infoLine);
-          console.log(infoLine);
+          continue;
         }
-      });
+        const infoLine = this.formatZipEntry(zipEntry);
+        this.logging.log.info(infoLine);
+        console.log(infoLine);
+      }
     } else {
       this.logging.log.error('No zip file found.');
     }
