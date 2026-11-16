@@ -1,9 +1,10 @@
 /**
  * @file Serverless Framework plugin that lists the entries of the packaged zip archive.
  */
-import Serverless from 'serverless';
+import type Serverless from 'serverless';
 
-import Plugin, { Logging } from 'serverless/classes/Plugin';
+import type { Logging } from 'serverless/classes/Plugin';
+import type Plugin from 'serverless/classes/Plugin';
 import AdmZip from 'adm-zip';
 import { filesize } from 'filesize';
 import { access } from 'node:fs/promises';
@@ -62,7 +63,10 @@ class ServerlessZipinfoPlugin implements Plugin {
    * await plugin.hooks['after:package:finalize']();
    */
   private async printArchiveInfo(): Promise<void> {
-    let artifact = this.serverless.service.package.artifact;
+    // The Serverless typings leave the package block untyped, so the artifact path is typed once here.
+    let artifact: string | undefined = (
+      this.serverless.service.package as { artifact?: string }
+    ).artifact;
     if (!artifact) {
       const zipPath = path.join(
         this.serverless.config.servicePath,
