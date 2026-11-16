@@ -83,6 +83,7 @@
     "filesize": "^11.0.29"
   },
   "overrides": {
-    "@eslint/core": "1.2.1"
+    "@eslint/core": "1.2.1",
+    "minimatch@>=9": "11.0.8"
   }
 }
