@@ -1,15 +1,16 @@
 /**
  * @file Unit tests for the zipinfo plugin, run against a real zip archive written to a temporary directory.
  */
-import AdmZip from 'adm-zip';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import AdmZip from 'adm-zip';
 import ServerlessZipinfoPlugin from '../src/index.js';
 
 type Logger = (...args: unknown[]) => void;
 
 describe('plugin tests', () => {
+  const originalLog = console.log;
   let dir: string;
 
   beforeEach(async () => {
@@ -17,6 +18,7 @@ describe('plugin tests', () => {
   });
 
   afterEach(async () => {
+    console.log = originalLog;
     await rm(dir, { recursive: true, force: true });
   });
 
@@ -30,7 +32,6 @@ describe('plugin tests', () => {
     const successLines: string[] = [];
     const errorLines: string[] = [];
     const consoleLines: string[] = [];
-    const originalLog = console.log;
     console.log = (...args: unknown[]) => {
       consoleLines.push(args.join(' '));
     };
@@ -59,11 +60,7 @@ describe('plugin tests', () => {
       >[2],
     );
 
-    try {
-      await (plugin.hooks['after:package:finalize'] as () => Promise<void>)();
-    } finally {
-      console.log = originalLog;
-    }
+    await (plugin.hooks['after:package:finalize'] as () => Promise<void>)();
 
     expect(successLines).toEqual([`Introspected archive: ${artifact}`]);
     expect(errorLines).toEqual([]);
