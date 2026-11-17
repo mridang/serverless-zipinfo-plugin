@@ -6,8 +6,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import AdmZip from 'adm-zip';
 import ServerlessZipinfoPlugin from '../src/index.js';
+import type Plugin from 'serverless/classes/Plugin';
 
-type Logger = (...args: unknown[]) => void;
+type Ctor = ConstructorParameters<typeof ServerlessZipinfoPlugin>;
 
 describe('plugin tests', () => {
   const originalLog = console.log;
@@ -43,24 +44,36 @@ describe('plugin tests', () => {
       },
       config: { servicePath: dir },
     };
-    const logging = {
+    const noop = () => undefined;
+    const progress: Plugin.Progress = {
+      namespace: 'test',
+      name: 'test',
+      update: noop,
+      info: noop,
+      notice: noop,
+      remove: noop,
+    };
+    const logging: Plugin.Logging = {
       log: {
-        info: ((line: string) => infoLines.push(line)) as Logger,
-        success: ((line: string) => successLines.push(line)) as Logger,
-        error: ((line: string) => errorLines.push(line)) as Logger,
+        error: (line: unknown) => errorLines.push(String(line)),
+        warning: noop,
+        notice: noop,
+        info: (line: unknown) => infoLines.push(String(line)),
+        debug: noop,
+        verbose: noop,
+        success: (line: unknown) => successLines.push(String(line)),
       },
+      writeText: noop,
+      progress: { get: () => progress, create: () => progress },
     };
     const plugin = new ServerlessZipinfoPlugin(
-      serverless as unknown as ConstructorParameters<
-        typeof ServerlessZipinfoPlugin
-      >[0],
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- a full Serverless instance needs a real service load; the plugin reads only the package artifact, service name and servicePath
+      serverless as unknown as Ctor[0],
       {},
-      logging as unknown as ConstructorParameters<
-        typeof ServerlessZipinfoPlugin
-      >[2],
+      logging,
     );
 
-    await (plugin.hooks['after:package:finalize'] as () => Promise<void>)();
+    await plugin.hooks['after:package:finalize']();
 
     expect(successLines).toEqual([`Introspected archive: ${artifact}`]);
     expect(errorLines).toEqual([]);
