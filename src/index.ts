@@ -1,14 +1,13 @@
 /**
  * @file Serverless Framework plugin that lists the entries of the packaged zip archive.
  */
-import type Serverless from 'serverless';
-
-import type { Logging } from 'serverless/classes/Plugin';
-import type Plugin from 'serverless/classes/Plugin';
-import AdmZip from 'adm-zip';
-import { filesize } from 'filesize';
 import { access } from 'node:fs/promises';
 import path from 'node:path';
+import AdmZip from 'adm-zip';
+import { filesize } from 'filesize';
+import type Serverless from 'serverless';
+
+import type Plugin from 'serverless/classes/Plugin';
 
 /**
  * Checks whether a file or directory can be accessed at the given path.
@@ -48,7 +47,7 @@ class ServerlessZipinfoPlugin implements Plugin {
   constructor(
     private readonly serverless: Serverless,
     _options: Serverless.Options,
-    private readonly logging: Logging,
+    private readonly logging: Plugin.Logging,
   ) {
     this.hooks = {
       'after:package:finalize': this.printArchiveInfo.bind(this),
@@ -64,25 +63,16 @@ class ServerlessZipinfoPlugin implements Plugin {
    */
   private async printArchiveInfo(): Promise<void> {
     // The Serverless typings leave the package block untyped, so the artifact path is typed once here.
-    let artifact: string | undefined = (
-      this.serverless.service.package as { artifact?: string }
-    ).artifact;
-    if (!artifact) {
-      const zipPath = path.join(
-        this.serverless.config.servicePath,
-        '.serverless',
-        this.serverless.service.getServiceName() + '.zip',
-      );
-      if (await fileExists(zipPath)) {
-        artifact = zipPath;
-      }
-    }
+    const declared = (this.serverless.service.package as { artifact?: string })
+      .artifact;
+    const artifact = declared || (await this.findDefaultArchive());
 
     if (artifact) {
       this.logging.log.success(`Introspected archive: ${artifact}`);
       console.log('\n');
 
-      var zip = new AdmZip(artifact);
+      const zip = new AdmZip(artifact);
+      // eslint-disable-next-line functional/no-loop-statements -- the loop only logs each entry in archive order
       for (const zipEntry of zip.getEntries()) {
         if (zipEntry.entryName.includes('node_modules')) {
           continue;
@@ -97,6 +87,19 @@ class ServerlessZipinfoPlugin implements Plugin {
   }
 
   /**
+   * Finds the default archive that Serverless writes for the service, when it exists.
+   * @returns The path of the archive, or undefined when no archive was written.
+   */
+  private async findDefaultArchive(): Promise<string | undefined> {
+    const zipPath = path.join(
+      this.serverless.config.servicePath,
+      '.serverless',
+      `${this.serverless.service.getServiceName()}.zip`,
+    );
+    return (await fileExists(zipPath)) ? zipPath : undefined;
+  }
+
+  /**
    * Formats one archive entry as a zipinfo-style line with its permissions, sizes, method and timestamp.
    * @param entry - The zip entry whose header supplies the size, method, timestamp and permissions.
    * @returns The formatted line that describes the entry.
@@ -104,24 +107,19 @@ class ServerlessZipinfoPlugin implements Plugin {
    * const line = plugin.formatZipEntry(new AdmZip(artifact).getEntries()[0]);
    */
   formatZipEntry(entry: AdmZip.IZipEntry): string {
-    const mode = entry.header.attr >>> 16;
+    const mode = Math.trunc(entry.header.attr / 2 ** 16);
     const size = filesize(entry.header.size);
     const compressedSize = filesize(entry.header.compressedSize);
     const method = entry.header.method === 0 ? 'stor' : 'defN';
     const dateTime = entry.header.time.toISOString();
     const fileName = entry.entryName;
 
-    const permissions = mode & 0o777;
-    const permissionString =
-      (permissions & 0o400 ? 'r' : '-') +
-      (permissions & 0o200 ? 'w' : '-') +
-      (permissions & 0o100 ? 'x' : '-') +
-      (permissions & 0o040 ? 'r' : '-') +
-      (permissions & 0o020 ? 'w' : '-') +
-      (permissions & 0o010 ? 'x' : '-') +
-      (permissions & 0o004 ? 'r' : '-') +
-      (permissions & 0o002 ? 'w' : '-') +
-      (permissions & 0o001 ? 'x' : '-');
+    const permissions = mode % 0o1000;
+    const permissionString = Array.from({ length: 9 }, (_, index) =>
+      Math.trunc(permissions / 2 ** (8 - index)) % 2 === 1
+        ? 'rwx'[index % 3]
+        : '-',
+    ).join('');
 
     return `• ${permissionString} 4.5 unx ${size.padStart(10, ' ')} bl ${compressedSize.padStart(10, ' ')} ${method} ${dateTime} ${fileName}`;
   }
